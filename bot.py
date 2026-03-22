@@ -206,13 +206,13 @@ async def generate_profile(member, data, guild):
     bg.alpha_composite(avatar, (152, 296))
 
     # points / max pixel plus petit
-    draw_text(bg, str(user["points"]), 505, 78, scale=2)
-    draw_text(bg, "/", 575, 78, scale=2)
-    draw_text(bg, str(user["max"]), 615, 78, scale=2)
+    draw_text(bg, str(user["points"]), 505, 78, scale=3)
+    draw_text(bg, "/", 575, 78, scale=3)
+    draw_text(bg, str(user["max"]), 615, 78, scale=3)
 
     # texte lisse plus grand
-    draw_smooth_text_left(bg, member.display_name, 170, 120, size=72)
-    draw_smooth_text_left(bg, get_rank(user["points"], user["max"]), 110, 210, size=52)
+    draw_smooth_text_left(bg, member.display_name, 170, 120, size=300)
+    draw_smooth_text_left(bg, get_rank(user["points"], user["max"]), 110, 210, size=300)
 
     uid = str(member.id)
     lovers = get_top_lovers(data, uid)
