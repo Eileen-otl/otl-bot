@@ -21,6 +21,9 @@ LOVE_GAIN_IMG = "images/love_gain.png"
 
 CONFESSION_CHANNEL_ID = 1483584376804737137
 
+POSITIVE_WORDS = ["love", "cute", "kiss", "heart", "adorable", "mignon", "jtm", "amour"]
+NEGATIVE_WORDS = ["hate", "nul", "bizarre", "weird", "méchant", "mechant"]
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -131,7 +134,7 @@ def calculate_ship(data, u1, u2):
 
 # ================= IMAGE TEXT =================
 
-def draw_text(img, text, x, y, scale=3):
+def draw_text(img, text, x, y, scale=6):
     font = ImageFont.load_default()
     bbox = font.getbbox(text)
 
@@ -163,7 +166,7 @@ def get_smooth_font(size):
     return ImageFont.load_default()
 
 
-def draw_centered_text(img, text, y, size=60):
+def draw_centered_text(img, text, y, size=80):
     draw = ImageDraw.Draw(img)
     font = get_smooth_font(size)
 
@@ -171,21 +174,21 @@ def draw_centered_text(img, text, y, size=60):
     text_width = bbox[2] - bbox[0]
     x = (img.width - text_width) // 2
 
-    for dx in [-2, -1, 0, 1, 2]:
-        for dy in [-2, -1, 0, 1, 2]:
+    for dx in [-3, -2, -1, 0, 1, 2, 3]:
+        for dy in [-3, -2, -1, 0, 1, 2, 3]:
             draw.text((x + dx, y + dy), text, font=font, fill=(255, 105, 180))
 
     draw.text((x, y), text, font=font, fill=(255, 255, 255))
 
 
-def draw_smooth_text_left(img, text, x, y, size=34,
+def draw_smooth_text_left(img, text, x, y, size=52,
                           fill_main=(255, 255, 255),
                           fill_outline=(255, 105, 180)):
     draw = ImageDraw.Draw(img)
     font = get_smooth_font(size)
 
-    for dx in [-2, -1, 0, 1, 2]:
-        for dy in [-2, -1, 0, 1, 2]:
+    for dx in [-3, -2, -1, 0, 1, 2, 3]:
+        for dy in [-3, -2, -1, 0, 1, 2, 3]:
             draw.text((x + dx, y + dy), text, font=font, fill=fill_outline)
 
     draw.text((x, y), text, font=font, fill=fill_main)
@@ -202,14 +205,14 @@ async def generate_profile(member, data, guild):
 
     bg.alpha_composite(avatar, (152, 296))
 
-    # points / max = style pixel comme avant
-    draw_text(bg, str(user["points"]), 505, 78, scale=3)
-    draw_text(bg, "/", 600, 78, scale=3)
-    draw_text(bg, str(user["max"]), 650, 78, scale=3)
+    # points / max = style pixel plus gros
+    draw_text(bg, str(user["points"]), 505, 78, scale=6)
+    draw_text(bg, "/", 625, 78, scale=6)
+    draw_text(bg, str(user["max"]), 690, 78, scale=6)
 
-    # texte lisse, tailles comme avant
-    draw_smooth_text_left(bg, member.display_name, 170, 120, size=40)
-    draw_smooth_text_left(bg, get_rank(user["points"], user["max"]), 110, 210, size=32)
+    # texte lisse plus gros
+    draw_smooth_text_left(bg, member.display_name, 170, 120, size=82)
+    draw_smooth_text_left(bg, get_rank(user["points"], user["max"]), 110, 210, size=60)
 
     uid = str(member.id)
     lovers = get_top_lovers(data, uid)
@@ -222,16 +225,16 @@ async def generate_profile(member, data, guild):
     if best:
         duo_member = guild.get_member(int(best))
         if duo_member:
-            draw_smooth_text_left(bg, f"Duo : {duo_member.display_name}", start_x, y, size=34)
-            y += 52
+            draw_smooth_text_left(bg, f"Duo : {duo_member.display_name}", start_x, y, size=50)
+            y += 58
 
     if crush:
-        draw_smooth_text_left(bg, "Crush : ???", start_x, y, size=34)
-        y += 52
+        draw_smooth_text_left(bg, "Crush : ???", start_x, y, size=50)
+        y += 58
 
     if lovers:
-        draw_smooth_text_left(bg, "Interet recu :", start_x, y, size=34)
-        y += 42
+        draw_smooth_text_left(bg, "Interet recu :", start_x, y, size=50)
+        y += 48
 
         for lover_id, count in lovers[:3]:
             lover_member = guild.get_member(int(lover_id))
@@ -241,9 +244,9 @@ async def generate_profile(member, data, guild):
                     f"- {lover_member.display_name} ({count})",
                     start_x + 8,
                     y,
-                    size=30
+                    size=34
                 )
-                y += 40
+                y += 42
 
     path = f"profile_{member.id}.png"
     bg.save(path)
@@ -280,10 +283,10 @@ def generate_toplove_image(guild, top_users):
     ov.rounded_rectangle((70, 80, 830, 1320), radius=35, fill=(20, 10, 25, 120))
     img = Image.alpha_composite(img, overlay)
 
-    draw_centered_text(img, "TOP LOVE", 100, size=80)
+    draw_centered_text(img, "TOP LOVE", 100, size=100)
 
     y = 260
-    line_gap = 150
+    line_gap = 170
 
     for i, (uid, user_data) in enumerate(top_users, start=1):
         member = guild.get_member(int(uid))
@@ -294,8 +297,8 @@ def generate_toplove_image(guild, top_users):
         line = f"{i}. {name}"
         score_line = f"{points} / {maxp}"
 
-        draw_centered_text(img, line, y, size=45)
-        draw_centered_text(img, score_line, y + 45, size=35)
+        draw_centered_text(img, line, y, size=58)
+        draw_centered_text(img, score_line, y + 55, size=42)
 
         y += line_gap
         if y > 1200:
@@ -476,8 +479,8 @@ async def ship(interaction: discord.Interaction, u1: discord.Member, u2: discord
     bg = Image.open(SHIP_BG).convert("RGBA")
 
     center_y = bg.height // 2
-    draw_centered_text(bg, u1.display_name, center_y - 180, size=70)
-    draw_centered_text(bg, u2.display_name, center_y + 110, size=70)
+    draw_centered_text(bg, u1.display_name, center_y - 180, size=78)
+    draw_centered_text(bg, u2.display_name, center_y + 110, size=78)
 
     heart_size = int(120 + score * 0.5)
 
@@ -499,7 +502,7 @@ async def ship(interaction: discord.Interaction, u1: discord.Member, u2: discord
         (bg.width // 2 - heart_size // 2, bg.height // 2 - heart_size // 2)
     )
 
-    draw_centered_text(bg, f"{score}%", center_y - 20, size=45)
+    draw_centered_text(bg, f"{score}%", center_y - 20, size=52)
 
     path = f"ship_{u1.id}_{u2.id}.png"
     bg.save(path)
@@ -539,7 +542,7 @@ async def matchmaking(interaction: discord.Interaction):
     overlay = Image.new("RGBA", base.size, (0, 0, 0, 90))
     base = Image.alpha_composite(base, overlay)
 
-    draw_centered_text(base, "MATCHMAKING", 80, size=70)
+    draw_centered_text(base, "MATCHMAKING", 80, size=90)
 
     y = 250
 
@@ -553,8 +556,8 @@ async def matchmaking(interaction: discord.Interaction):
         text = f"{u.display_name} ❤️ {b.display_name}"
         percent = f"{score}%"
 
-        draw_centered_text(base, text, y, size=40)
-        draw_centered_text(base, percent, y + 50, size=30)
+        draw_centered_text(base, text, y, size=50)
+        draw_centered_text(base, percent, y + 55, size=38)
 
         y += 180
 
@@ -611,7 +614,7 @@ async def crush(interaction: discord.Interaction, member: discord.Member):
         base = Image.alpha_composite(base, overlay)
 
         draw = ImageDraw.Draw(base)
-        font = get_smooth_font(80)
+        font = get_smooth_font(92)
 
         text = "✨ MATCH ✨"
 
@@ -643,8 +646,8 @@ async def crush(interaction: discord.Interaction, member: discord.Member):
         base = Image.alpha_composite(base, overlay)
 
         draw = ImageDraw.Draw(base)
-        font = get_smooth_font(52)
-        small_font = get_smooth_font(34)
+        font = get_smooth_font(64)
+        small_font = get_smooth_font(42)
 
         main_text = "CRUSH ENREGISTRÉ"
         sub_text = "secret 🤫"
@@ -662,7 +665,7 @@ async def crush(interaction: discord.Interaction, member: discord.Member):
         bbox2 = small_font.getbbox(sub_text)
         text_width2 = bbox2[2] - bbox2[0]
         x2 = (base.width - text_width2) // 2
-        y2 = 120
+        y2 = 135
 
         for dx in [-2, -1, 0, 1, 2]:
             for dy in [-2, -1, 0, 1, 2]:
