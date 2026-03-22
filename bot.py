@@ -225,15 +225,15 @@ async def generate_profile(member, data, guild):
     if best:
         duo_member = guild.get_member(int(best))
         if duo_member:
-            draw_smooth_text_left(bg, f"Duo : {duo_member.display_name}", start_x, y, size=52)
+            draw_smooth_text_left(bg, f"Duo : {duo_member.display_name}", start_x, y, size=300)
             y += 58
 
     if crush:
-        draw_smooth_text_left(bg, "Crush : ???", start_x, y, size=52)
+        draw_smooth_text_left(bg, "Crush : ???", start_x, y, size=300)
         y += 58
 
     if lovers:
-        draw_smooth_text_left(bg, "Interet recu :", start_x, y, size=52)
+        draw_smooth_text_left(bg, "Interet recu :", start_x, y, size=300)
         y += 48
 
         for lover_id, count in lovers[:3]:
