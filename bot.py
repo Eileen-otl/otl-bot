@@ -115,6 +115,9 @@ def calculate_ship(data, u1, u2):
     u1 = str(u1)
     u2 = str(u2)
 
+    ensure_user(data, u1)
+    ensure_user(data, u2)
+
     p1 = data["users"][u1]["points"]
     p2 = data["users"][u2]["points"]
 
@@ -126,7 +129,7 @@ def calculate_ship(data, u1, u2):
 
     return min(100, base + bonus + random.randint(0, 20))
 
-# ================= IMAGE =================
+# ================= IMAGE TEXT =================
 
 def draw_text(img, text, x, y, scale=3):
     font = ImageFont.load_default()
@@ -175,7 +178,9 @@ def draw_centered_text(img, text, y, size=60):
     draw.text((x, y), text, font=font, fill=(255, 255, 255))
 
 
-def draw_smooth_text_left(img, text, x, y, size=34, fill_main=(255, 255, 255), fill_outline=(255, 105, 180)):
+def draw_smooth_text_left(img, text, x, y, size=34,
+                          fill_main=(255, 255, 255),
+                          fill_outline=(255, 105, 180)):
     draw = ImageDraw.Draw(img)
     font = get_smooth_font(size)
 
@@ -185,6 +190,7 @@ def draw_smooth_text_left(img, text, x, y, size=34, fill_main=(255, 255, 255), f
 
     draw.text((x, y), text, font=font, fill=fill_main)
 
+# ================= PROFILE IMAGE =================
 
 async def generate_profile(member, data, guild):
     user = data["users"][str(member.id)]
@@ -196,12 +202,12 @@ async def generate_profile(member, data, guild):
 
     bg.alpha_composite(avatar, (152, 296))
 
-    # points / max = pixel
-    draw_text(bg, str(user["points"]), 505, 78)
-    draw_text(bg, "/", 600, 78)
-    draw_text(bg, str(user["max"]), 650, 78)
+    # points / max = style pixel comme avant
+    draw_text(bg, str(user["points"]), 505, 78, scale=3)
+    draw_text(bg, "/", 600, 78, scale=3)
+    draw_text(bg, str(user["max"]), 650, 78, scale=3)
 
-    # texte lisse
+    # texte lisse, tailles comme avant
     draw_smooth_text_left(bg, member.display_name, 170, 120, size=40)
     draw_smooth_text_left(bg, get_rank(user["points"], user["max"]), 110, 210, size=32)
 
@@ -230,13 +236,20 @@ async def generate_profile(member, data, guild):
         for lover_id, count in lovers[:3]:
             lover_member = guild.get_member(int(lover_id))
             if lover_member:
-                draw_smooth_text_left(bg, f"- {lover_member.display_name} ({count})", start_x + 8, y, size=30)
+                draw_smooth_text_left(
+                    bg,
+                    f"- {lover_member.display_name} ({count})",
+                    start_x + 8,
+                    y,
+                    size=30
+                )
                 y += 40
 
     path = f"profile_{member.id}.png"
     bg.save(path)
     return path
 
+# ================= TOPLOVE IMAGE =================
 
 def get_random_top_background():
     if not os.path.exists(TOP_BG_FOLDER):
@@ -312,7 +325,7 @@ async def on_message(message):
 
     now = message.created_at.timestamp()
 
-    # perte inactivité
+    # perte d'inactivité
     if user_id in last_active:
         diff = now - last_active[user_id]
         if diff > 3600:
@@ -329,9 +342,16 @@ async def on_message(message):
         data["users"][user_id]["points"] += 1
         cooldowns[user_id] = now
 
+    # bonus/malus mots
+    content_lower = message.content.lower()
+    if any(word in content_lower for word in POSITIVE_WORDS):
+        data["users"][user_id]["points"] += 1
+    if any(word in content_lower for word in NEGATIVE_WORDS):
+        data["users"][user_id]["points"] = max(0, data["users"][user_id]["points"] - 1)
+
     save_data(data)
 
-    # drama random avec contexte
+    # drama random
     if random.random() < 0.03:
         drama_types = {
             "jalousie": [
@@ -352,7 +372,7 @@ async def on_message(message):
         last_context[message.channel.id] = context
         await message.channel.send(msg)
 
-    # si quelqu’un répond au bot
+    # réponses au bot
     if message.reference:
         try:
             referenced = await message.channel.fetch_message(message.reference.message_id)
@@ -378,19 +398,14 @@ async def on_message(message):
                         f"{message.author.mention} continue... c’est intéressant."
                     ]
 
-                await message.reply(
-                    random.choice(replies),
-                    mention_author=False
-                )
+                await message.reply(random.choice(replies), mention_author=False)
                 return
         except Exception:
             pass
 
     # anomalie
     if data["users"][user_id]["points"] == 0:
-        await message.channel.send(
-            f"⚠️ {message.author.mention} est devenu une anomalie..."
-        )
+        await message.channel.send(f"⚠️ {message.author.mention} est devenu une anomalie...")
 
     await bot.process_commands(message)
 
@@ -616,10 +631,7 @@ async def crush(interaction: discord.Interaction, member: discord.Member):
         path = "match_result.png"
         base.save(path)
 
-        await interaction.response.send_message(
-            file=discord.File(path),
-            ephemeral=True
-        )
+        await interaction.response.send_message(file=discord.File(path), ephemeral=True)
 
     else:
         save_data(data)
@@ -660,19 +672,51 @@ async def crush(interaction: discord.Interaction, member: discord.Member):
         path = "crush_result.png"
         base.save(path)
 
-        await interaction.response.send_message(
-            file=discord.File(path),
-            ephemeral=True
-        )
+        await interaction.response.send_message(file=discord.File(path), ephemeral=True)
+
+
+@tree.command(name="mycrush", guild=discord.Object(id=GUILD_ID))
+async def mycrush(interaction: discord.Interaction):
+    data = load_data()
+    uid = str(interaction.user.id)
+    ensure_user(data, uid)
+
+    crush_id = data["users"][uid].get("crush")
+
+    if not crush_id:
+        await interaction.response.send_message("💔 Aucun crush pour le moment", ephemeral=True)
+        return
+
+    member = interaction.guild.get_member(int(crush_id))
+    if not member:
+        await interaction.response.send_message("❓ introuvable", ephemeral=True)
+        return
+
+    await interaction.response.send_message(
+        f"💘 Ton crush actuel : **{member.display_name}**",
+        ephemeral=True
+    )
+
+
+@tree.command(name="resetcrush", guild=discord.Object(id=GUILD_ID))
+async def resetcrush(interaction: discord.Interaction):
+    data = load_data()
+    uid = str(interaction.user.id)
+    ensure_user(data, uid)
+
+    data["users"][uid]["crush"] = None
+    save_data(data)
+
+    await interaction.response.send_message("💔 Crush supprimé", ephemeral=True)
 
 
 @tree.command(name="confess", guild=discord.Object(id=GUILD_ID))
-async def confess(
-    interaction: discord.Interaction,
-    member: discord.Member,
-    message: str,
-    anonyme: bool = True
-):
+@app_commands.describe(
+    member="La personne ciblée",
+    message="Ton message",
+    anonyme="Envoyer anonymement ?"
+)
+async def confess(interaction: discord.Interaction, member: discord.Member, message: str, anonyme: bool = True):
     if member.bot or member == interaction.user:
         await interaction.response.send_message("❌ impossible", ephemeral=True)
         return
@@ -724,9 +768,12 @@ async def guideotl(interaction: discord.Interaction):
         "/toplove\n"
         "/matchmaking\n"
         "/crush\n"
+        "/mycrush\n"
+        "/resetcrush\n"
         "/confess\n"
         "/guideotl"
     )
 
+# ================= RUN =================
 
 bot.run(TOKEN)
